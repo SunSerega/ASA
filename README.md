@@ -1,2 +1,1 @@
-# ASA
-Snake, but it's autotomic
+Try eating yourself
