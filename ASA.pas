@@ -14,7 +14,7 @@ var
   LastDrawing: array[,] of (char, System.ConsoleColor);
   pl: Snake;
   pl_contol: System.Threading.Thread;
-  max_l := 10;
+  max_l := 30;
 
 procedure DrawLvlBorder(lvl: SnakeLvl);
 begin
