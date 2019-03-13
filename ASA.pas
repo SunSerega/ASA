@@ -16,6 +16,35 @@ var
   pl_contol: System.Threading.Thread;
   max_l := 30;
 
+function GetKeyState(nVirtKey: byte): byte;
+external 'User32.dll' name 'GetKeyState';
+
+function KeyPr(kk: byte) :=
+GetKeyState(kk) shr 7 = $01;
+
+procedure PlControlTS :=
+try
+  
+  while true do
+  begin
+    
+    if KeyPr($53) or KeyPr($28) then pl.ChangeDrct(0);
+    if KeyPr($41) or KeyPr($25) then pl.ChangeDrct(1);
+    if KeyPr($57) or KeyPr($26) then pl.ChangeDrct(2);
+    if KeyPr($44) or KeyPr($27) then pl.ChangeDrct(3);
+    
+    Sleep(10);
+  end;
+  
+except
+  on e: System.Threading.ThreadAbortException do ;//ok
+  on e: Exception do
+  begin
+    WriteAllText('error.log', _ObjectToString(e));
+    halt;
+  end;
+end;
+
 procedure DrawLvlBorder(lvl: SnakeLvl);
 begin
   var w := lvl.tls.GetLength(0);
@@ -88,8 +117,10 @@ function TryPlay(lvl: SnakeLvl): boolean;
 begin
   DrawLvlBorder(lvl);
   pl := new Snake(lvl);
-  pl_contol.Resume;
   pl.Color := System.ConsoleColor.DarkGreen;
+  
+  pl_contol := new System.Threading.Thread(PlControlTS);
+  pl_contol.Start;
   
   while true do
   begin
@@ -185,41 +216,11 @@ begin
   end;
 end;
 
-function GetKeyState(nVirtKey: byte): byte;
-external 'User32.dll' name 'GetKeyState';
-
-function KeyPr(kk: byte) :=
-GetKeyState(kk) shr 7 = $01;
-
 begin
   try
     {$ifndef SkipConsole}
     System.Console.CursorVisible := false;
     {$endif}
-    
-    pl_contol := System.Threading.Thread.Create(()->
-    try
-      while pl = nil do Sleep(10);
-      
-      while true do
-      begin
-        
-        if KeyPr($53) or KeyPr($28) then pl.ChangeDrct(0);
-        if KeyPr($41) or KeyPr($25) then pl.ChangeDrct(1);
-        if KeyPr($57) or KeyPr($26) then pl.ChangeDrct(2);
-        if KeyPr($44) or KeyPr($27) then pl.ChangeDrct(3);
-        
-        Sleep(10);
-      end;
-    except
-      on e: Exception do
-      begin
-        WriteAllText('error.log', _ObjectToString(e));
-        halt;
-      end;
-    end);
-    pl_contol.Start;
-    pl_contol.Suspend;
     
     foreach var lvl_name in
       System.IO.Directory.EnumerateFiles('GD')
@@ -232,7 +233,7 @@ begin
       
       while not TryPlay(lvl) do
       begin
-        pl_contol.Suspend;
+        pl_contol.Abort;
         System.Console.Clear;
         writeln('GameOver!');
         writeln('Press Enter to restart');
@@ -245,7 +246,7 @@ begin
         end;
         lvl := new SnakeLvl(lvl_name,5);
       end;
-      pl_contol.Suspend;
+      pl_contol.Abort;
     end;
     
   except
